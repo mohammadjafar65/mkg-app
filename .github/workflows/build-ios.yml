@@ -27,12 +27,6 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: 💎 Setup Ruby & Bundler
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3'
-          bundler-cache: true
-
       - name: 📦 Install NPM Dependencies
         run: npm ci
 
@@ -44,11 +38,11 @@ jobs:
       - name: 📱 Install CocoaPods
         run: |
           cd ios
-          pod install --repo-update
+          pod install
           cd ..
 
       - name: 🔨 Build iOS Simulator (.app)
-        if: ${{ inputs.build_type == 'simulator' }}
+        if: github.event.inputs.build_type == 'simulator'
         run: |
           cd ios
           xcodebuild -workspace MansuriKhidmatGroup.xcworkspace \
@@ -64,7 +58,7 @@ jobs:
           mv MansuriKhidmatGroup-Simulator.app.zip ../../../
 
       - name: 🔨 Build iOS Unsigned (.ipa)
-        if: ${{ inputs.build_type == 'unsigned_ipa' || github.event_name == 'push' }}
+        if: github.event.inputs.build_type != 'simulator'
         run: |
           cd ios
           xcodebuild -workspace MansuriKhidmatGroup.xcworkspace \
@@ -84,10 +78,18 @@ jobs:
           mv MansuriKhidmatGroup.ipa ../
           cd ..
 
-      - name: 📤 Upload iOS Artifact
+      - name: 📤 Upload Simulator App Artifact
+        if: github.event.inputs.build_type == 'simulator'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.build_type == 'simulator' && 'MansuriKhidmatGroup-Simulator-App' || 'MansuriKhidmatGroup-iOS-IPA' }}
-          path: ${{ inputs.build_type == 'simulator' && 'MansuriKhidmatGroup-Simulator.app.zip' || 'MansuriKhidmatGroup.ipa' }}
+          name: MansuriKhidmatGroup-Simulator-App
+          path: MansuriKhidmatGroup-Simulator.app.zip
           retention-days: 14
 
+      - name: 📤 Upload iOS IPA Artifact
+        if: github.event.inputs.build_type != 'simulator'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MansuriKhidmatGroup-iOS-IPA
+          path: MansuriKhidmatGroup.ipa
+          retention-days: 14

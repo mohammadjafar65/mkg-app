@@ -1,0 +1,34 @@
+workflows:
+  react-native-ios:
+    name: Build iOS IPA
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      node: 22.11.0
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install
+      - name: Build iOS App
+        script: |
+          cd ios
+          xcodebuild -workspace MansuriKhidmatGroup.xcworkspace \
+                     -scheme MansuriKhidmatGroup \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -derivedDataPath ../build \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     build
+          cd ..
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/MansuriKhidmatGroup.app Payload/
+          zip -r -X MansuriKhidmatGroup.ipa Payload
+    artifacts:
+      - MansuriKhidmatGroup.ipa

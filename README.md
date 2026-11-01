@@ -1,97 +1,239 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Mansuri Khidmat Group - Mobile Application (React Native)
 
-# Getting Started
+A production-ready mobile application for Android and iOS built with React Native and TypeScript, providing a polished, native app experience for the Mansuri Khidmat Group platform (`https://mkg.wecreatedesign.co/login/`).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## 📱 Features
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- **Native App-Like Experience**
+  - Custom branded animated splash screen on app launch.
+  - Smooth loading bar overlay and initial launch screen.
+  - Native gesture support and disabled browser-like artifacts (long-press menus, selection callouts, visible scrollbars).
+  - Safe-area inset handling across modern Android devices and iPhones with notches / Dynamic Island.
+  - Android hardware back button integration (WebView history back navigation with double-tap to exit).
+  - Pull-to-refresh functionality.
+  - Responsive keyboard management (`adjustResize`) for smooth login form interactions.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **Intelligent Navigation & Deep Linking**
+  - Internal navigation kept smoothly within WebView.
+  - External links (e.g. WhatsApp, phone dialer `tel:`, email `mailto:`, external domains) automatically opened via the device's native handlers.
+  - Android Intent filters configured for universal linking (`https://mkg.wecreatedesign.co`).
 
-```sh
-# Using npm
+- **Robust Session & Cookie Persistence**
+  - Shared cookies and third-party cookies enabled for persistent login sessions.
+  - Automatic session expiration detection and handling.
+  - Device-level cookie flushing.
+
+- **Offline & Error Resilience**
+  - Real-time network reachability detection via `@react-native-community/netinfo`.
+  - Dedicated native error screens for:
+    - No internet connection
+    - Website loading failure
+    - Server unavailable (5xx)
+    - Unexpected errors
+  - Retry mechanism with automatic reconnection detection.
+  - Floating offline banner when connection drops during an active session.
+
+---
+
+## 🏗️ Architecture & Project Structure
+
+```
+MansuriKhidmatGroup/
+├── App.tsx                        # App entry point wrapped in SafeAreaProvider
+├── index.js                       # React Native app registration
+├── app.json                       # App identity & metadata
+├── src/
+│   ├── components/                # Reusable UI components
+│   │   ├── SplashScreen.tsx       # Branded animated splash screen
+│   │   ├── LoadingOverlay.tsx     # Animated progress bar overlay
+│   │   ├── InitialLoadingScreen.tsx # First-time loading screen
+│   │   ├── ErrorScreen.tsx        # Native error screens with retry button
+│   │   ├── OfflineBanner.tsx      # Animated offline status banner
+│   │   └── index.ts
+│   ├── screens/                   # Screen controllers
+│   │   ├── HomeScreen.tsx         # Main WebView screen & state orchestration
+│   │   └── index.ts
+│   ├── hooks/                     # Custom React hooks
+│   │   ├── useWebView.ts          # Navigation, progress & error handling logic
+│   │   ├── useNetworkStatus.ts    # NetInfo connectivity listener
+│   │   ├── useBackHandler.ts      # Android back button interceptor
+│   │   └── index.ts
+│   ├── services/                  # Platform services
+│   │   ├── cookieManager.ts       # Cookie & session persistence
+│   │   └── index.ts
+│   ├── utils/                     # Utility helpers
+│   │   ├── url.ts                 # Domain validation, external link detection
+│   │   ├── platform.ts            # Screen dimensions, notch detection
+│   │   └── index.ts
+│   ├── constants/                 # Theme colors, URLs, strings
+│   │   └── index.ts
+│   └── types/                     # TypeScript definitions
+│       ├── index.ts
+│       └── react-native-webview.d.ts # TypeScript definitions for WebView
+├── android/                       # Native Android project
+│   ├── app/src/main/
+│   │   ├── AndroidManifest.xml    # Permissions, deep links, orientation
+│   │   ├── res/values/styles.xml  # Splash theme, status bar colors
+│   │   ├── res/values/strings.xml # App display name
+│   │   ├── res/values/colors.xml  # Brand color definitions
+│   │   ├── res/drawable/splash_background.xml # Native layer drawable
+│   │   └── res/xml/network_security_config.xml # Domain security config
+└── ios/                           # Native iOS project
+    ├── Podfile
+    └── MansuriKhidmatGroup/
+        ├── Info.plist             # iOS permissions, display name, status bar
+        └── LaunchScreen.storyboard# Native launch screen
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js**: >= 22.11.0
+- **npm** or **yarn**
+- **Android Studio**: Android SDK (Platform 34/35), Android SDK Build-Tools, Android Emulator or physical device with USB debugging.
+- **Xcode** (macOS only, for iOS): iOS 17/18 SDK, CocoaPods.
+
+### Installation
+
+1. Navigate to the project directory:
+   ```bash
+   cd "MansuriKhidmatGroup"
+   ```
+
+2. Install dependencies (already pre-installed):
+   ```bash
+   npm install
+   ```
+
+3. (iOS only) Install CocoaPods:
+   ```bash
+   cd ios && pod install && cd ..
+   ```
+
+4. Verify TypeScript compilation:
+   ```bash
+   npm run typecheck
+   ```
+
+---
+
+## 🏃 Running Locally
+
+### Start Metro Bundler
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
+### Run on Android
+Ensure an Android emulator is running or a physical device is connected via USB:
+```bash
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+### Run on iOS (macOS only)
+```bash
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## 📦 Generating Android Release (APK & AAB)
 
-## Step 3: Modify your app
+### 1. Generate a Release Keystore
+If you don't already have a production keystore:
+```bash
+keytool -genkeypair -v -storetype PKCS12 -keystore android/app/release.keystore -alias mkg-key-alias -keyalg RSA -keysize 2048 -validity 10000
+```
 
-Now that you have successfully run the app, let's make changes!
+### 2. Configure Gradle Properties
+Add the following lines to `android/gradle.properties` (or your user-level `~/.gradle/gradle.properties`):
+```properties
+MKG_UPLOAD_STORE_FILE=release.keystore
+MKG_UPLOAD_KEY_ALIAS=mkg-key-alias
+MKG_UPLOAD_STORE_PASSWORD=your_keystore_password
+MKG_UPLOAD_KEY_PASSWORD=your_key_password
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+### 3. Update `android/app/build.gradle` Signing Config
+In `android/app/build.gradle`, update the `release` signing config:
+```groovy
+signingConfigs {
+    debug {
+        storeFile file('debug.keystore')
+        storePassword 'android'
+        keyAlias 'androiddebugkey'
+        keyPassword 'android'
+    }
+    release {
+        if (project.hasProperty('MKG_UPLOAD_STORE_FILE')) {
+            storeFile file(MKG_UPLOAD_STORE_FILE)
+            storePassword MKG_UPLOAD_STORE_PASSWORD
+            keyAlias MKG_UPLOAD_KEY_ALIAS
+            keyPassword MKG_UPLOAD_KEY_PASSWORD
+        }
+    }
+}
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled true
+        proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+    }
+}
+```
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### 4. Build Production APK
+To generate a standalone `.apk` for direct distribution or testing:
+```bash
+npm run build:android
+```
+The generated APK will be at:
+`android/app/build/outputs/apk/release/app-release.apk`
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+### 5. Build Production AAB (Google Play Store)
+To generate an `.aab` (Android App Bundle) for upload to the Google Play Console:
+```bash
+npm run bundle:android
+```
+The generated AAB will be at:
+`android/app/build/outputs/bundle/release/app-release.aab`
 
-## Congratulations! :tada:
+---
 
-You've successfully run and modified your React Native App. :partying_face:
+## 🍎 Building & Submitting for iOS (App Store)
 
-### Now what?
+1. **Set Up Apple Developer Account**:
+   - Register an App ID with bundle identifier `com.mansurikhidmatgroup` in Apple Developer Portal.
+   - Create Provisioning Profiles (App Store Distribution).
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+2. **Open the Project in Xcode**:
+   ```bash
+   open ios/MansuriKhidmatGroup.xcworkspace
+   ```
 
-# Troubleshooting
+3. **Configure Signing**:
+   - Select the `MansuriKhidmatGroup` project in Xcode navigator.
+   - Under `Signing & Capabilities`, select your Apple Team.
+   - Ensure `Automatically manage signing` is enabled or specify your provisioning profile.
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+4. **Verify App Icons**:
+   - Add app icon assets to `ios/MansuriKhidmatGroup/Images.xcassets/AppIcon.appiconset`.
 
-# Learn More
+5. **Archive the Build**:
+   - In Xcode, select `Any iOS Device (arm64)` as build destination.
+   - Go to `Product` > `Archive`.
+   - Once archive is created, click `Distribute App` in the Organizer window.
+   - Select `App Store Connect` > `Upload` to send the build to TestFlight & App Store Review.
 
-To learn more about React Native, take a look at the following resources:
+---
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## 🔒 Security & Privacy
+
+- **Transport Security**: Strict HTTPS configured in `network_security_config.xml` (Android) and `Info.plist` (iOS) prohibiting arbitrary cleartext loads.
+- **Permissions**: Minimized manifest permissions with clear descriptions in iOS `Info.plist`.
+- **Session Privacy**: Login credentials and cookies are isolated to the app sandbox and cannot be accessed by external mobile browsers.

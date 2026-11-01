@@ -13,6 +13,7 @@ import {
   Animated,
   StatusBar,
   Dimensions,
+  Image,
 } from 'react-native';
 import { COLORS, APP_NAME } from '../constants';
 
@@ -123,9 +124,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           { transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>MKG</Text>
-        </View>
+        <Image
+          source={require('../assets/logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.appName}>{APP_NAME}</Text>
         <Text style={styles.tagline}>Community Service Platform</Text>
       </Animated.View>
@@ -150,25 +153,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
   },
-  iconCircle: {
-    width: width * 0.28,
-    height: width * 0.28,
-    borderRadius: (width * 0.28) / 2,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  iconText: {
-    fontSize: width * 0.08,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: 2,
+  logoImage: {
+    width: width * 0.42,
+    height: width * 0.42,
+    marginBottom: 20,
   },
   appName: {
     fontSize: 26,

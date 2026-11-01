@@ -3,11 +3,7 @@
     <item android:drawable="@color/splashBackground" />
     <item
         android:gravity="center"
-        android:width="120dp"
-        android:height="120dp">
-        <shape android:shape="oval">
-            <solid android:color="#FFFFFF" />
-        </shape>
-    </item>
+        android:width="140dp"
+        android:height="140dp"
+        android:drawable="@drawable/splash_icon" />
 </layer-list>
-

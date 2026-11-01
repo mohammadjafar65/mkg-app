@@ -13,6 +13,7 @@ import {
   Animated,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
 import { COLORS, APP_NAME } from '../constants';
 
@@ -49,9 +50,11 @@ export const InitialLoadingScreen: React.FC<InitialLoadingScreenProps> = ({
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>MKG</Text>
-        </View>
+        <Image
+          source={require('../assets/logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>{APP_NAME}</Text>
 
         <View style={styles.progressContainer}>
@@ -93,25 +96,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  iconCircle: {
-    width: width * 0.2,
-    height: width * 0.2,
-    borderRadius: (width * 0.2) / 2,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoImage: {
+    width: width * 0.28,
+    height: width * 0.28,
     marginBottom: 20,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  iconText: {
-    fontSize: width * 0.055,
-    fontWeight: '900',
-    color: COLORS.white,
-    letterSpacing: 1,
   },
   title: {
     fontSize: 20,

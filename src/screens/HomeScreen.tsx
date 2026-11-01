@@ -25,6 +25,7 @@ import {
   ErrorScreen,
   OfflineBanner,
   InitialLoadingScreen,
+  HeaderBar,
 } from '../components';
 import { useNetworkStatus, useWebView, useBackHandler } from '../hooks';
 import { APP_URL, COLORS, USER_AGENT_SUFFIX, MIN_SPLASH_DURATION } from '../constants';
@@ -53,7 +54,6 @@ const INJECTED_JAVASCRIPT = `
     /* Improve scrolling feel */
     body {
       -webkit-overflow-scrolling: touch;
-      overscroll-behavior: none;
     }
     /* Hide scrollbar for cleaner look */
     ::-webkit-scrollbar {
@@ -61,6 +61,22 @@ const INJECTED_JAVASCRIPT = `
     }
   \`;
   document.head.appendChild(style);
+
+  // Report scroll position for pull-to-refresh
+  var lastScrollY = 0;
+  function reportScroll() {
+    var y = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if ((y <= 2 && lastScrollY > 2) || (y > 2 && lastScrollY <= 2)) {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'scroll',
+          offsetY: y
+        }));
+      }
+    }
+    lastScrollY = y;
+  }
+  window.addEventListener('scroll', reportScroll, { passive: true });
 
   // Detect logout: watch for navigation to login page
   var observer = new MutationObserver(function() {
@@ -97,6 +113,7 @@ export const HomeScreen: React.FC = () => {
   const [appState, setAppState] = useState<AppState>('splash');
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPullToRefreshEnabled, setIsPullToRefreshEnabled] = useState(true);
 
   const { isConnected, connectionStatus } = useNetworkStatus();
   const {
@@ -121,18 +138,42 @@ export const HomeScreen: React.FC = () => {
     enabled: appState === 'ready',
   });
 
+  // Handle manual back button from HeaderBar
+  const handleGoBack = useCallback(() => {
+    if (webViewRef.current && webViewState.canGoBack) {
+      webViewRef.current.goBack();
+    }
+  }, [webViewState.canGoBack]);
+
+  // Handle Home navigation from HeaderBar
+  const handleGoHome = useCallback(() => {
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(
+        `window.location.href = '${APP_URL}'; true;`,
+      );
+    }
+  }, []);
+
   // Handle splash screen completion
   const handleSplashFinish = useCallback(() => {
     setAppState('loading');
   }, []);
 
+  // Handle scroll events to enable pull-to-refresh only at the top of the page
+  const handleScroll = useCallback(
+    (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+      const y = event.nativeEvent.contentOffset.y;
+      setIsPullToRefreshEnabled(y <= 2);
+    },
+    [],
+  );
+
   // Handle WebView load completion
   const onLoadEnd = useCallback(() => {
     handleLoadEnd();
     // Stop pull-to-refresh spinner when page finishes loading
-    if (isRefreshing) {
-      setIsRefreshing(false);
-    }
+    setIsRefreshing(false);
+    setIsPullToRefreshEnabled(true);
     if (!hasLoadedOnce) {
       setHasLoadedOnce(true);
       // Small delay for smooth transition
@@ -140,12 +181,14 @@ export const HomeScreen: React.FC = () => {
         setAppState('ready');
       }, 300);
     }
-  }, [handleLoadEnd, hasLoadedOnce, isRefreshing]);
+  }, [handleLoadEnd, hasLoadedOnce]);
 
   // Handle WebView errors
   const onError = useCallback(
     (syntheticEvent: { nativeEvent: { code: number; description: string } }) => {
       handleError(syntheticEvent);
+      setIsRefreshing(false);
+      setIsPullToRefreshEnabled(true);
       setAppState('error');
     },
     [handleError],
@@ -163,13 +206,19 @@ export const HomeScreen: React.FC = () => {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     webViewRef.current?.reload();
+    // Safety timeout to ensure spinner doesn't get stuck
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 8000);
   }, []);
 
   // Handle messages from WebView
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'navigation' && data.isLoginPage) {
+      if (data.type === 'scroll') {
+        setIsPullToRefreshEnabled(data.offsetY <= 2);
+      } else if (data.type === 'navigation' && data.isLoginPage) {
         // User was redirected to login (session expired)
         console.log('Session expired, on login page');
       }
@@ -218,7 +267,7 @@ export const HomeScreen: React.FC = () => {
     // UI
     showsHorizontalScrollIndicator: false,
     showsVerticalScrollIndicator: false,
-    overScrollMode: 'never' as const,
+    overScrollMode: 'always' as const,
     contentInsetAdjustmentBehavior: 'never' as const,
     automaticallyAdjustContentInsets: false,
     // Keyboard
@@ -226,7 +275,7 @@ export const HomeScreen: React.FC = () => {
     automaticallyAdjustsScrollIndicatorInsets: false,
     // Scrolling
     scrollEnabled: true,
-    nestedScrollEnabled: true,
+    nestedScrollEnabled: false,
     // Security
     originWhitelist: ['https://*', 'http://*', 'tel:*', 'mailto:*', 'whatsapp:*'],
     mixedContentMode: 'compatibility' as const,
@@ -248,56 +297,57 @@ export const HomeScreen: React.FC = () => {
 
   /**
    * Pull-to-refresh approach:
-   * - Android: native `pullToRefreshEnabled` prop on WebView (handled by the system).
-   * - iOS: WebView is wrapped in a ScrollView with a RefreshControl.
-   *        `bounces={true}` is required on the ScrollView so the user can overscroll
-   *        to trigger the refresh gesture. The inner WebView has `bounces={false}`
-   *        so only the outer ScrollView handles the overscroll.
+   * - Both Android and iOS are wrapped in ScrollView with RefreshControl.
+   * - On Android, scrollEnabled is false so WebView handles vertical scrolls natively,
+   *   while RefreshControl triggers when pulled down at the top of the page.
+   * - isPullToRefreshEnabled disables the RefreshControl when the user is scrolled down,
+   *   allowing smooth internal page scrolling.
    */
   const renderWebView = () => {
-    if (Platform.OS === 'ios') {
-      return (
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={COLORS.primary}
-              colors={[COLORS.primary]}
-              progressBackgroundColor={COLORS.white}
-            />
-          }
-          style={styles.scrollView}
-          bounces={true}
-          scrollEnabled={true}
-          showsVerticalScrollIndicator={false}
-        >
-          <WebView
-            ref={webViewRef}
-            {...webViewProps}
-            bounces={false}
-          />
-        </ScrollView>
-      );
-    }
-
-    // Android: use native pull-to-refresh
     return (
-      <WebView
-        ref={webViewRef}
-        {...webViewProps}
-        bounces={false}
-        pullToRefreshEnabled={true}
-      />
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            enabled={isPullToRefreshEnabled}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+            progressBackgroundColor={COLORS.white}
+          />
+        }
+        style={styles.scrollView}
+        bounces={Platform.OS === 'ios'}
+        scrollEnabled={Platform.OS === 'ios'}
+        showsVerticalScrollIndicator={false}
+      >
+        <WebView
+          ref={webViewRef}
+          {...webViewProps}
+          bounces={false}
+          onScroll={handleScroll}
+        />
+      </ScrollView>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar
-        barStyle={appState === 'splash' ? 'light-content' : 'dark-content'}
-      />
+    <>
+      <SafeAreaView style={styles.topSafeArea} />
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+
+        {/* Top App Header Bar */}
+        {appState !== 'splash' && (
+          <HeaderBar
+            canGoBack={webViewState.canGoBack}
+            onGoBack={handleGoBack}
+            onRefresh={handleRefresh}
+            onGoHome={handleGoHome}
+            isRefreshing={isRefreshing}
+          />
+        )}
 
       {/* WebView - always rendered but hidden during splash/error */}
       <View
@@ -339,10 +389,15 @@ export const HomeScreen: React.FC = () => {
         />
       )}
     </SafeAreaView>
+  </>
   );
 };
 
 const styles = StyleSheet.create({
+  topSafeArea: {
+    flex: 0,
+    backgroundColor: COLORS.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
@@ -357,7 +412,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContainer: {
-    flexGrow: 1,
+    flex: 1,
   },
   webView: {
     flex: 1,

@@ -1,86 +1,11 @@
 workflows:
 
   # ─────────────────────────────────────────────
-  # iOS — Ad Hoc / App Store signed IPA
-  # ─────────────────────────────────────────────
-  react-native-ios:
-    name: Mansuri Khidmat Group — iOS Build
-    max_build_duration: 90
-    instance_type: mac_mini_m1
-
-    environment:
-      node: 22.11.0
-      xcode: latest
-      cocoapods: default
-      vars:
-        BUNDLE_ID: "org.reactjs.native.example.MansuriKhidmatGroup"
-        XCODE_WORKSPACE: "ios/MansuriKhidmatGroup.xcworkspace"
-        XCODE_SCHEME: "MansuriKhidmatGroup"
-      # ── Code Signing ──────────────────────────────────────────────────────
-      # Add these in Codemagic UI → Team → Code Signing Identities:
-      #   ios_signing_certificate  → Your .p12 certificate
-      #   ios_signing_certificate_password → .p12 password
-      #   ios_provisioning_profile → Your .mobileprovision file
-      # Then reference them here:
-      ios_signing:
-        distribution_type: app_store   # or: ad_hoc | development | enterprise
-        bundle_identifier: $BUNDLE_ID
-
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
-
-    scripts:
-      - name: Set up Ruby gems (Bundler)
-        script: |
-          gem install bundler --user-install
-          bundle install --path vendor/bundle || true
-
-      - name: Install npm dependencies
-        script: npm ci
-
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios
-          pod install --repo-update
-
-      - name: Set app version & build number
-        script: |
-          # Use Codemagic build number as iOS build number
-          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1)) || true
-          echo "Build number set"
-
-      - name: Build iOS IPA
-        script: |
-          xcode-project use-profiles
-          xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath build/MansuriKhidmatGroup.xcarchive \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            archive | xcpretty
-
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/MansuriKhidmatGroup.xcarchive \
-            -exportOptionsPlist /Users/builder/export_options.plist \
-            -exportPath build/ipa | xcpretty
-
-    artifacts:
-      - build/ipa/*.ipa
-      - build/MansuriKhidmatGroup.xcarchive
-      - /tmp/xcodebuild_logs/*.log
-
-  # ─────────────────────────────────────────────
-  # iOS — No Code Signing (Simulator / CI test)
+  # iOS — Unsigned IPA (no Apple account needed)
+  # Side-load with AltStore / Sideloadly / 3uTools
   # ─────────────────────────────────────────────
   react-native-ios-unsigned:
-    name: Mansuri Khidmat Group — iOS Unsigned Build
+    name: Mansuri Khidmat Group — iOS Build
     max_build_duration: 60
     instance_type: mac_mini_m1
 
@@ -111,17 +36,17 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             build | xcpretty
 
-          # Package into installable IPA (works for side-loading via AltStore/Sideloadly)
+          # Package into IPA (side-loadable via AltStore / Sideloadly)
           cd build/Build/Products/Release-iphoneos
           mkdir -p Payload
           cp -r MansuriKhidmatGroup.app Payload/
-          zip -r -X MansuriKhidmatGroup-unsigned.ipa Payload
+          zip -r -X MansuriKhidmatGroup.ipa Payload
 
     artifacts:
-      - build/Build/Products/Release-iphoneos/MansuriKhidmatGroup-unsigned.ipa
+      - build/Build/Products/Release-iphoneos/MansuriKhidmatGroup.ipa
 
   # ─────────────────────────────────────────────
-  # Android — Release APK (bonus workflow)
+  # Android — Release APK
   # ─────────────────────────────────────────────
   react-native-android:
     name: Mansuri Khidmat Group — Android APK
@@ -131,13 +56,6 @@ workflows:
     environment:
       node: 22.11.0
       java: 17
-
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
 
     scripts:
       - name: Install npm dependencies
@@ -151,5 +69,3 @@ workflows:
 
     artifacts:
       - android/app/build/outputs/apk/release/app-release.apk
-
-

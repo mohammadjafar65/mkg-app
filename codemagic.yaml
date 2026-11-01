@@ -76,21 +76,6 @@ workflows:
       - build/MansuriKhidmatGroup.xcarchive
       - /tmp/xcodebuild_logs/*.log
 
-    publishing:
-      # Uncomment to auto-upload to TestFlight:
-      # app_store_connect:
-      #   api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-      #   key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-      #   issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-      #   submit_to_testflight: true
-      # Uncomment and set your email to get build notifications:
-      # email:
-      #   recipients:
-      #     - your@email.com
-      #   notify:
-      #     success: true
-      #     failure: true
-
   # ─────────────────────────────────────────────
   # iOS — No Code Signing (Simulator / CI test)
   # ─────────────────────────────────────────────
@@ -167,11 +152,4 @@ workflows:
     artifacts:
       - android/app/build/outputs/apk/release/app-release.apk
 
-    publishing:
-      # Uncomment and set your email to get build notifications:
-      # email:
-      #   recipients:
-      #     - your@email.com
-      #   notify:
-      #     success: true
-      #     failure: true
+
